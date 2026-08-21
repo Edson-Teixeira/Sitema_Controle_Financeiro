@@ -1,0 +1,19 @@
+manifestVersion: 1
+id: app-ia-finance
+name: Gestão Financeira IA
+tagline: Sistema de controle financeiro pessoal com contas, cartões e categorias
+category: Finance
+version: "1.0.0"
+port: 8000
+description: >-
+  Aplicação web para controle de finanças pessoais desenvolvida em Django e REST Framework,
+  com suporte a gestão de contas bancárias, cartões de crédito, parcelamentos e relatórios em tempo real.
+developer: Desenvolvedor
+website: https://github.com
+submitter: Community
+submission: https://github.com
+repo: https://github.com
+support: https://github.com
+gallery: []
+path: ""
+defaultWithAuth: true

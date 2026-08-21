@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Finanças Pessoais</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="h-full overflow-hidden bg-slate-950 font-sans text-slate-100" x-data="financeApp()" x-init="initApp()">
+
+    <div class="flex h-full">
+
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0">
+            <div>
+                <!-- Brand -->
+                <div class="h-16 flex items-center px-6 border-b border-slate-800 gap-3">
+                    <div class="bg-gradient-to-tr from-cyan-500 to-blue-600 p-2 rounded-xl text-white shadow-lg shadow-cyan-500/20">
+                        <i data-lucide="wallet-cards" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg text-white leading-tight">Finanças Pro</h1>
+                        <span class="text-xs text-slate-400 font-medium">Gestão Pessoal</span>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="p-4 space-y-1.5">
+                    <button @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'bg-cyan-500/10 text-cyan-400 font-semibold border-l-4 border-cyan-500' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                        <span>Dashboard</span>
+                    </button>
+
+                    <button @click="currentTab = 'accounts'" :class="currentTab === 'accounts' ? 'bg-cyan-500/10 text-cyan-400 font-semibold border-l-4 border-cyan-500' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition">
+                        <i data-lucide="landmark" class="w-5 h-5"></i>
+                        <span>Contas Bancárias</span>
+                    </button>
+
+                    <button @click="currentTab = 'cards'" :class="currentTab === 'cards' ? 'bg-cyan-500/10 text-cyan-400 font-semibold border-l-4 border-cyan-500' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition">
+                        <i data-lucide="credit-card" class="w-5 h-5"></i>
+                        <span>Cartões de Crédito</span>
+                    </button>
+
+                    <button @click="currentTab = 'transactions'" :class="currentTab === 'transactions' ? 'bg-cyan-500/10 text-cyan-400 font-semibold border-l-4 border-cyan-500' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition">
+                        <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+                        <span>Transações</span>
+                    </button>
+
+                    <button @click="currentTab = 'pending'" :class="currentTab === 'pending' ? 'bg-cyan-500/10 text-cyan-400 font-semibold border-l-4 border-cyan-500' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition relative">
+                        <i data-lucide="clock" class="w-5 h-5"></i>
+                        <span>Pendências</span>
+                        <span x-show="pendingCount > 0" x-text="pendingCount" class="ml-auto bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold"></span>
+                    </button>
+
+                    <button @click="currentTab = 'categories'" :class="currentTab === 'categories' ? 'bg-cyan-500/10 text-cyan-400 font-semibold border-l-4 border-cyan-500' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition">
+                        <i data-lucide="tags" class="w-5 h-5"></i>
+                        <span>Categorias</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Footer / DB Status -->
+            <div class="p-4 border-t border-slate-800">
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-xs text-slate-400">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>SQLite Online</span>
+                    </div>
+                    <span class="text-[10px] text-slate-500 bg-slate-800 px-2 py-0.5 rounded font-mono">v1.5</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-950">
+
+            <!-- Header Bar -->
+            <header class="h-16 bg-slate-900/80 backdrop-blur border-b border-slate-800 px-8 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-xl font-bold text-slate-100" x-text="tabTitles[currentTab]">Dashboard</h2>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button @click="openTransferModal()" class="flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded-lg transition border border-slate-700">
+                        <i data-lucide="arrow-right-left" class="w-4 h-4 text-cyan-400"></i>
+                        <span>Transferência</span>
+                    </button>
+
+                    <button @click="openTransactionModal()" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-cyan-500/20 transition">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Nova Transação</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Scrollable Page Content -->
+            <main class="flex-1 overflow-y-auto p-8">
+
+                <!-- 1. DASHBOARD TAB -->
+                <div x-show="currentTab === 'dashboard'" class="space-y-8 pt-2">
+
+                    <!-- Dashboard Cycle Navigator Header -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2.5 bg-cyan-500/10 text-cyan-400 rounded-xl">
+                                <i data-lucide="calendar" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-100 text-sm">Ciclo Financeiro Selecionado</h3>
+                                <p class="text-xs text-slate-400">Exibindo exclusivamente os valores e o balanço deste mês</p>
+                            </div>
+                        </div>
+
+                        <!-- Cycle Navigator Arrows -->
+                        <div class="flex items-center gap-3 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800">
+                            <button type="button" @click="prevDashboardCycle()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                                <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                            </button>
+
+                            <div class="text-center min-w-[130px]">
+                                <span class="font-black text-sm text-slate-100" x-text="getMonthName(dashboardCycle.month) + ' / ' + dashboardCycle.year"></span>
+                            </div>
+
+                            <button type="button" @click="nextDashboardCycle()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                                <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Financial Balance Bar Chart Card (Entradas, Saídas, Saldo do Ciclo, Previsto do Ciclo) -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                            <div>
+                                <h3 class="font-bold text-slate-100 text-base flex items-center gap-2">
+                                    <i data-lucide="bar-chart-3" class="w-5 h-5 text-cyan-400"></i>
+                                    <span>Balanço do Ciclo</span>
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Valores exclusivos do ciclo de <span class="text-cyan-400 font-semibold" x-text="getMonthName(dashboardCycle.month) + '/' + dashboardCycle.year"></span></p>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-4 text-xs font-semibold">
+                                <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-slate-300">Entradas: <strong class="text-emerald-400" x-text="formatCurrency(dashboard.total_entradas)"></strong></span></div>
+                                <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500"></span><span class="text-slate-300">Saídas: <strong class="text-rose-400" x-text="formatCurrency(dashboard.total_saidas)"></strong></span></div>
+                                <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-sky-500"></span><span class="text-slate-300">Saldo: <strong class="text-sky-400" x-text="formatCurrency(dashboard.saldo)"></strong></span></div>
+                                <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-purple-500"></span><span class="text-slate-300">Previsto: <strong class="text-purple-400" x-text="formatCurrency(dashboard.previsto)"></strong></span></div>
+                            </div>
+                        </div>
+
+                        <div class="h-64 relative w-full flex items-center justify-center">
+                            <canvas id="cycleBarChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Stat Cards of Selected Cycle -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                        
+                        <!-- Cycle Entradas Card -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 relative overflow-hidden shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Entradas do Ciclo</span>
+                                <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                                    <i data-lucide="trending-up" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black text-emerald-400" x-text="formatCurrency(dashboard.total_entradas)">R$ 0,00</div>
+                            <div class="flex items-center justify-between text-xs text-slate-400 mt-2">
+                                <span>Realizado: <strong class="text-slate-200" x-text="formatCurrency(dashboard.month_realized_income)"></strong></span>
+                                <span>Pendente: <strong class="text-amber-400" x-text="formatCurrency(dashboard.month_pending_income)"></strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Cycle Saídas Card -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 relative overflow-hidden shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Saídas do Ciclo</span>
+                                <div class="p-2 bg-rose-500/10 text-rose-400 rounded-xl">
+                                    <i data-lucide="trending-down" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black text-rose-400" x-text="formatCurrency(dashboard.total_saidas)">R$ 0,00</div>
+                            <div class="flex items-center justify-between text-xs text-slate-400 mt-2">
+                                <span>Despesas: <strong class="text-slate-200" x-text="formatCurrency(dashboard.month_realized_expenses + dashboard.month_pending_expenses)"></strong></span>
+                                <span>Faturas: <strong class="text-purple-400" x-text="formatCurrency(dashboard.month_invoices_total)"></strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Cycle Saldo Card -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 relative overflow-hidden shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Saldo do Ciclo</span>
+                                <div class="p-2 bg-sky-500/10 text-sky-400 rounded-xl">
+                                    <i data-lucide="wallet" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black" :class="dashboard.saldo >= 0 ? 'text-sky-400' : 'text-rose-400'" x-text="formatCurrency(dashboard.saldo)">R$ 0,00</div>
+                            <p class="text-xs text-slate-500 mt-2">Entradas realizadas - Saídas pagas do mês</p>
+                        </div>
+
+                        <!-- Cycle Previsto Card -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 relative overflow-hidden shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Previsto do Ciclo</span>
+                                <div class="p-2 bg-purple-500/10 text-purple-400 rounded-xl">
+                                    <i data-lucide="target" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black" :class="dashboard.previsto >= 0 ? 'text-purple-400' : 'text-rose-400'" x-text="formatCurrency(dashboard.previsto)">R$ 0,00</div>
+                            <p class="text-xs text-slate-500 mt-2">Resultado final estimado após quitar saídas</p>
+                        </div>
+
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Expenses by Category Doughnut -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
+                            <div>
+                                <h3 class="font-bold text-slate-200 text-base mb-1">Despesas por Categoria</h3>
+                                <p class="text-xs text-slate-400 mb-4">Distribuição do ciclo selecionado</p>
+                            </div>
+                            <div class="h-64 relative flex items-center justify-center">
+                                <canvas id="expensesChart" x-show="dashboard.expenses_by_category && dashboard.expenses_by_category.length > 0"></canvas>
+                                <div x-show="!dashboard.expenses_by_category || dashboard.expenses_by_category.length === 0" class="text-slate-500 text-sm text-center">
+                                    Nenhuma despesa registrada neste ciclo. 🏷️
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upcoming 7 Days Due Dates -->
+                        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 class="font-bold text-slate-200 text-base">Próximos Vencimentos (7 dias)</h3>
+                                        <p class="text-xs text-slate-400">Contas e faturas a vencer nos próximos dias</p>
+                                    </div>
+                                    <span class="px-2.5 py-1 bg-amber-500/10 text-amber-400 text-xs font-semibold rounded-full border border-amber-500/20">Atenção</span>
+                                </div>
+
+                                <div class="space-y-3 max-h-64 overflow-y-auto pr-2">
+                                    <template x-for="item in dashboard.upcoming_due_dates" :key="item.id">
+                                        <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                                            <div class="flex items-center gap-3">
+                                                <div class="p-2 rounded-lg" :class="item.is_card_invoice ? 'bg-purple-500/10 text-purple-400' : 'bg-amber-500/10 text-amber-400'">
+                                                    <i :data-lucide="item.is_card_invoice ? 'credit-card' : 'clock'" class="w-4 h-4"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="font-semibold text-sm text-slate-200" x-text="item.title"></div>
+                                                    <div class="text-xs text-slate-400" x-text="formatDate(item.date) + ' • ' + item.type"></div>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <div class="font-bold text-sm text-slate-100" x-text="formatCurrency(item.amount)"></div>
+                                                <span class="text-[10px] px-2 py-0.5 rounded font-medium bg-amber-500/20 text-amber-300" x-text="item.status"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <div x-show="!dashboard.upcoming_due_dates || dashboard.upcoming_due_dates.length === 0" class="py-8 text-center text-slate-500 text-sm">
+                                        Nenhum vencimento nos próximos 7 dias. 🎉
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Transactions Table -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-slate-200 text-base">Últimas Transações</h3>
+                            <button @click="currentTab = 'transactions'" class="text-xs text-cyan-400 hover:text-cyan-300 font-medium">Ver Todas ➔</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm text-slate-300">
+                                <thead class="text-xs uppercase bg-slate-950/60 text-slate-400 border-b border-slate-800">
+                                    <tr>
+                                        <th class="py-3 px-4">Descrição</th>
+                                        <th class="py-3 px-4">Tipo</th>
+                                        <th class="py-3 px-4">Categoria</th>
+                                        <th class="py-3 px-4">Origem / Cartão</th>
+                                        <th class="py-3 px-4">Data</th>
+                                        <th class="py-3 px-4">Valor</th>
+                                        <th class="py-3 px-4 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800/60">
+                                    <template x-for="tx in dashboard.recent_transactions" :key="tx.id">
+                                        <tr class="hover:bg-slate-800/40 transition">
+                                            <td class="py-3 px-4 font-medium text-slate-200" x-text="tx.description"></td>
+                                            <td class="py-3 px-4">
+                                                <span class="text-xs px-2 py-0.5 rounded font-medium" :class="getTypeBadgeClass(tx.type)">
+                                                    <span x-text="tx.type_display"></span>
+                                                </span>
+                                            </td>
+                                            <td class="py-3 px-4 text-slate-400" x-text="tx.category_name || '-'"></td>
+                                            <td class="py-3 px-4 text-slate-400" x-text="tx.account_name || tx.credit_card_name || '-'"></td>
+                                            <td class="py-3 px-4 text-slate-400" x-text="formatDate(tx.date)"></td>
+                                            <td class="py-3 px-4 font-bold" :class="tx.type === 'INCOME' ? 'text-emerald-400' : (tx.type === 'EXPENSE' ? 'text-rose-400' : 'text-cyan-400')" x-text="(tx.type === 'EXPENSE' ? '-' : '+') + ' ' + formatCurrency(tx.amount)"></td>
+                                            <td class="py-3 px-4 text-center">
+                                                <span class="text-xs px-2.5 py-0.5 rounded-full font-medium" :class="tx.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'" x-text="tx.status_display"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. ACCOUNTS TAB -->
+                <div x-show="currentTab === 'accounts'" class="space-y-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-100">Suas Contas Bancárias</h3>
+                            <p class="text-xs text-slate-400">Gerencie contas correntes, poupanças e investimentos com opções de edição e personalização</p>
+                        </div>
+                        <button @click="openAccountModal()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold rounded-lg shadow transition flex items-center gap-2">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Nova Conta</span>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <template x-for="acc in accounts" :key="acc.id">
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-sm flex flex-col justify-between">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold shadow-md shrink-0" :style="'background-color:' + acc.color">
+                                            <i :data-lucide="acc.icon || 'landmark'" class="w-6 h-6"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-slate-100 text-base" x-text="acc.name"></h4>
+                                            <p class="text-xs text-slate-400" x-text="acc.institution + ' • ' + acc.account_type_display"></p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <button @click="editAccountModal(acc)" title="Editar Conta" class="text-slate-400 hover:text-cyan-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+                                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                                        </button>
+                                        <button @click="deleteAccount(acc.id)" title="Excluir Conta" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 pt-4 border-t border-slate-800 flex items-end justify-between">
+                                    <div>
+                                        <span class="text-xs text-slate-500">Saldo Atual</span>
+                                        <div class="text-2xl font-black text-white" x-text="formatCurrency(acc.current_balance)"></div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-[10px] text-slate-500 uppercase">Inicial</span>
+                                        <div class="text-xs font-semibold text-slate-400" x-text="formatCurrency(acc.initial_balance)"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- 3. CREDIT CARDS TAB -->
+                <div x-show="currentTab === 'cards'" class="space-y-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-100">Cartões de Crédito</h3>
+                            <p class="text-xs text-slate-400">Controle limites, faturas abertas e vencimentos</p>
+                        </div>
+                        <button @click="openCardModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg shadow transition flex items-center gap-2">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Novo Cartão</span>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <template x-for="card in cards" :key="card.id">
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-sm flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white" :style="'background-color:' + card.color">
+                                                <i data-lucide="credit-card" class="w-5 h-5"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-bold text-slate-100 text-base" x-text="card.name"></h4>
+                                                <p class="text-xs text-slate-400" x-text="'Fecha dia ' + card.closing_day + ' • Vence dia ' + card.due_day"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Progress Bar -->
+                                    <div class="space-y-2 mt-4">
+                                        <div class="flex justify-between text-xs">
+                                            <span class="text-slate-400">Limite Usado</span>
+                                            <span class="font-bold text-slate-200" x-text="formatCurrency(card.used_limit)"></span>
+                                        </div>
+                                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-purple-500 h-full rounded-full transition-all duration-500" :style="'width: ' + Math.min(100, (card.used_limit / card.total_limit) * 100) + '%'"></div>
+                                        </div>
+                                        <div class="flex justify-between text-[11px] text-slate-400">
+                                            <span>Disponível: <strong class="text-emerald-400" x-text="formatCurrency(card.available_limit)"></strong></span>
+                                            <span>Total: <strong class="text-slate-300" x-text="formatCurrency(card.total_limit)"></strong></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
+                                    <button @click="openInvoicesModal(card)" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-purple-300 font-semibold text-xs rounded-lg transition border border-slate-700 flex items-center justify-center gap-2">
+                                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                                        <span>Ver Faturas & Pagar</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- 4. TRANSACTIONS TAB -->
+                <div x-show="currentTab === 'transactions'" class="space-y-6">
+                    <!-- Filters bar -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center gap-4">
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="text-xs text-slate-400 font-medium block mb-1">Buscar</label>
+                            <input type="text" x-model="txFilters.search" placeholder="Buscar por descrição..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                        </div>
+
+                        <div>
+                            <label class="text-xs text-slate-400 font-medium block mb-1">Tipo</label>
+                            <select x-model="txFilters.type" @change="loadTransactions()" class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                                <option value="">Todos os Tipos</option>
+                                <option value="INCOME">Entradas (Receitas)</option>
+                                <option value="EXPENSE">Saídas (Despesas)</option>
+                                <option value="TRANSFER">Transferências</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-xs text-slate-400 font-medium block mb-1">Status</label>
+                            <select x-model="txFilters.status" @change="loadTransactions()" class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+                                <option value="">Todos os Status</option>
+                                <option value="COMPLETED">Realizadas / Pagas</option>
+                                <option value="PENDING">Pendentes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Transactions Table -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead class="text-xs uppercase bg-slate-950/80 text-slate-400 border-b border-slate-800">
+                                <tr>
+                                    <th class="py-3 px-4">Descrição</th>
+                                    <th class="py-3 px-4">Tipo</th>
+                                    <th class="py-3 px-4">Categoria</th>
+                                    <th class="py-3 px-4">Conta / Cartão</th>
+                                    <th class="py-3 px-4">Data</th>
+                                    <th class="py-3 px-4">Valor</th>
+                                    <th class="py-3 px-4 text-center">Status</th>
+                                    <th class="py-3 px-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60">
+                                <template x-for="tx in filteredTransactions" :key="tx.id">
+                                    <tr class="hover:bg-slate-800/40 transition">
+                                        <td class="py-3 px-4 font-medium text-slate-200">
+                                            <span x-text="tx.description"></span>
+                                            <template x-if="tx.total_installments > 1">
+                                                <span class="ml-2 text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-cyan-400 font-mono" x-text="tx.installment_number + '/' + tx.total_installments"></span>
+                                            </template>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="text-xs px-2 py-0.5 rounded font-medium" :class="getTypeBadgeClass(tx.type)">
+                                                <span x-text="tx.type_display"></span>
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4 text-slate-400" x-text="tx.category_name || '-'"></td>
+                                        <td class="py-3 px-4 text-slate-400" x-text="tx.account_name || tx.credit_card_name || '-'"></td>
+                                        <td class="py-3 px-4 text-slate-400" x-text="formatDate(tx.date)"></td>
+                                        <td class="py-3 px-4 font-bold" :class="tx.type === 'INCOME' ? 'text-emerald-400' : (tx.type === 'EXPENSE' ? 'text-rose-400' : 'text-cyan-400')" x-text="(tx.type === 'EXPENSE' ? '-' : '+') + ' ' + formatCurrency(tx.amount)"></td>
+                                        <td class="py-3 px-4 text-center">
+                                            <button @click="toggleTxStatus(tx.id)" class="text-xs px-2.5 py-1 rounded-full font-medium border transition cursor-pointer" :class="tx.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'">
+                                                <span x-text="tx.status_display"></span>
+                                            </button>
+                                        </td>
+                                        <td class="py-3 px-4 text-right flex items-center justify-end gap-1">
+                                            <button @click="editTransactionModal(tx)" title="Editar Transação" class="text-slate-400 hover:text-cyan-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+                                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                                            </button>
+                                            <button @click="deleteTransaction(tx.id)" title="Excluir Transação" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 5. PENDING TAB -->
+                <div x-show="currentTab === 'pending'" class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-100">Painel de Pendências</h3>
+                        <p class="text-xs text-slate-400">Transações pendentes não alteram o saldo das contas até que você confirme o pagamento/recebimento.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Pending Incomes -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                            <h4 class="font-bold text-emerald-400 text-base mb-4 flex items-center gap-2">
+                                <i data-lucide="arrow-down-left" class="w-5 h-5"></i>
+                                <span>Receitas Pendentes</span>
+                            </h4>
+
+                            <div class="space-y-3">
+                                <template x-for="tx in pendingIncomes" :key="tx.id">
+                                    <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                                        <div>
+                                            <div class="font-semibold text-slate-200 text-sm" x-text="tx.description"></div>
+                                            <div class="text-xs text-slate-400" x-text="formatDate(tx.date) + ' • ' + (tx.account_name || 'Sem conta')"></div>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="font-bold text-emerald-400 text-sm" x-text="formatCurrency(tx.amount)"></span>
+                                            <button @click="toggleTxStatus(tx.id)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition shadow">
+                                                Marcar como Recebido
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div x-show="pendingIncomes.length === 0" class="py-8 text-center text-slate-500 text-sm">
+                                    Nenhuma receita pendente.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pending Expenses -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                            <h4 class="font-bold text-rose-400 text-base mb-4 flex items-center gap-2">
+                                <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+                                <span>Despesas Pendentes</span>
+                            </h4>
+
+                            <div class="space-y-3">
+                                <template x-for="tx in pendingExpenses" :key="tx.id">
+                                    <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                                        <div>
+                                            <div class="font-semibold text-slate-200 text-sm" x-text="tx.description"></div>
+                                            <div class="text-xs text-slate-400" x-text="formatDate(tx.date) + ' • ' + (tx.account_name || tx.credit_card_name || 'Sem fonte')"></div>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="font-bold text-rose-400 text-sm" x-text="formatCurrency(tx.amount)"></span>
+                                            <button @click="toggleTxStatus(tx.id)" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg transition shadow">
+                                                Marcar como Pago
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div x-show="pendingExpenses.length === 0" class="py-8 text-center text-slate-500 text-sm">
+                                    Nenhuma despesa pendente.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. CATEGORIES TAB -->
+                <div x-show="currentTab === 'categories'" class="space-y-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-100">Categorias de Finanças</h3>
+                            <p class="text-xs text-slate-400">Organize suas entradas e saídas por categoria com opções de adição, edição e remoção</p>
+                        </div>
+                        <button @click="openCategoryModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold rounded-lg transition border border-slate-700 flex items-center gap-2">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Nova Categoria</span>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Income Categories -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                            <h4 class="font-bold text-emerald-400 text-base mb-4">Receitas</h4>
+                            <div class="space-y-2">
+                                <template x-for="cat in categories.filter(c => c.type === 'INCOME')" :key="cat.id">
+                                    <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs" :style="'background-color:' + cat.color">
+                                                <i :data-lucide="cat.icon || 'tag'" class="w-4 h-4"></i>
+                                            </div>
+                                            <span class="font-semibold text-slate-200 text-sm" x-text="cat.name"></span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <button @click="editCategoryModal(cat)" title="Editar Categoria" class="text-slate-400 hover:text-cyan-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+                                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                                            </button>
+                                            <button @click="deleteCategory(cat.id)" title="Excluir Categoria" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Expense Categories -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                            <h4 class="font-bold text-rose-400 text-base mb-4">Despesas</h4>
+                            <div class="space-y-2">
+                                <template x-for="cat in categories.filter(c => c.type === 'EXPENSE')" :key="cat.id">
+                                    <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs" :style="'background-color:' + cat.color">
+                                                <i :data-lucide="cat.icon || 'tag'" class="w-4 h-4"></i>
+                                            </div>
+                                            <span class="font-semibold text-slate-200 text-sm" x-text="cat.name"></span>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <button @click="editCategoryModal(cat)" title="Editar Categoria" class="text-slate-400 hover:text-cyan-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+                                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                                            </button>
+                                            <button @click="deleteCategory(cat.id)" title="Excluir Categoria" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+
+    </div>
+
+    <!-- MODAL: CREATE / EDIT TRANSACTION -->
+    <div x-show="showTxModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div @click.away="showTxModal = false" class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-slate-100" x-text="isEditingTransaction ? 'Editar Transação' : 'Nova Transação'"></h3>
+                <button @click="showTxModal = false" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form @submit.prevent="saveTransaction()" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Descrição</label>
+                    <input type="text" x-model="txForm.description" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Valor (R$)</label>
+                        <input type="number" step="0.01" x-model="txForm.amount" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Data</label>
+                        <input type="date" x-model="txForm.date" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Tipo de Operação</label>
+                        <select x-model="txForm.type" @change="onTxTypeChange()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                            <option value="EXPENSE">Saída (Despesa)</option>
+                            <option value="INCOME">Entrada (Receita)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Forma de Pagamento</label>
+                        <select x-model="txForm.paymentSource" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                            <option value="ACCOUNT">Conta Bancária</option>
+                            <option value="CARD" x-show="txForm.type === 'EXPENSE'">Cartão de Crédito</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Account selection -->
+                <div x-show="txForm.paymentSource === 'ACCOUNT'">
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Conta Bancária</label>
+                    <select x-model="txForm.account" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                        <option value="">Selecione a conta</option>
+                        <template x-for="acc in accounts" :key="acc.id">
+                            <option :value="acc.id" x-text="acc.name + ' (' + acc.institution + ')'"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <!-- Credit Card selection -->
+                <div x-show="txForm.paymentSource === 'CARD' && txForm.type === 'EXPENSE'" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Cartão de Crédito</label>
+                        <select x-model="txForm.credit_card" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                            <option value="">Selecione o cartão</option>
+                            <template x-for="c in cards" :key="c.id">
+                                <option :value="c.id" x-text="c.name"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <div x-show="!isEditingTransaction">
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Parcelamento</label>
+                        <select x-model="txForm.total_installments" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                            <option value="1">À vista (1x)</option>
+                            <option value="2">2x sem juros</option>
+                            <option value="3">3x sem juros</option>
+                            <option value="4">4x sem juros</option>
+                            <option value="5">5x sem juros</option>
+                            <option value="6">6x sem juros</option>
+                            <option value="10">10x sem juros</option>
+                            <option value="12">12x sem juros</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Category -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Categoria</label>
+                    <select x-model="txForm.category" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                        <option value="">Selecione uma categoria</option>
+                        <template x-for="cat in categories.filter(c => c.type === txForm.type)" :key="cat.id">
+                            <option :value="cat.id" x-text="cat.name"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Status da Transação</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 text-sm text-slate-300">
+                            <input type="radio" x-model="txForm.status" value="COMPLETED" class="text-cyan-500 focus:ring-0">
+                            <span>Realizada / Paga</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-slate-300">
+                            <input type="radio" x-model="txForm.status" value="PENDING" class="text-cyan-500 focus:ring-0">
+                            <span>Pendente</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
+                    <button type="button" @click="showTxModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 text-sm font-semibold rounded-lg hover:bg-slate-700">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold rounded-lg shadow" x-text="isEditingTransaction ? 'Atualizar Transação' : 'Salvar Transação'"></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: TRANSFER -->
+    <div x-show="showTransferModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div @click.away="showTransferModal = false" class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-slate-100">Transferência entre Contas</h3>
+                <button @click="showTransferModal = false" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form @submit.prevent="executeTransfer()" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Conta Origem (Débito)</label>
+                    <select x-model="transferForm.source_account_id" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                        <option value="">Selecione origem</option>
+                        <template x-for="acc in accounts" :key="acc.id">
+                            <option :value="acc.id" x-text="acc.name + ' (R$ ' + acc.current_balance + ')'"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Conta Destino (Crédito)</label>
+                    <select x-model="transferForm.destination_account_id" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                        <option value="">Selecione destino</option>
+                        <template x-for="acc in accounts" :key="acc.id">
+                            <option :value="acc.id" x-text="acc.name"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Valor (R$)</label>
+                        <input type="number" step="0.01" x-model="transferForm.amount" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Data</label>
+                        <input type="date" x-model="transferForm.date" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Descrição</label>
+                    <input type="text" x-model="transferForm.description" placeholder="Ex: Transferência para Poupança" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
+                    <button type="button" @click="showTransferModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 text-sm font-semibold rounded-lg hover:bg-slate-700">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold rounded-lg shadow">Confirmar Transferência</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: INVOICES BY CYCLE -->
+    <div x-show="showInvoicesModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div @click.away="showInvoicesModal = false" class="bg-slate-900 border border-slate-800 w-full max-w-xl rounded-2xl p-6 shadow-2xl space-y-5">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold shrink-0" :style="'background-color:' + (selectedCard ? selectedCard.color : '#7c3aed')">
+                        <i data-lucide="credit-card" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-100" x-text="selectedCard ? selectedCard.name : 'Cartão'"></h3>
+                        <p class="text-xs text-slate-400" x-text="'Fechamento: Dia ' + (selectedCard ? selectedCard.closing_day : '') + ' • Vencimento: Dia ' + (selectedCard ? selectedCard.due_day : '')"></p>
+                    </div>
+                </div>
+                <button @click="showInvoicesModal = false" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Cycle Navigation Bar -->
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                <!-- Left Arrow -->
+                <button type="button" @click="prevInvoiceCycle()" :disabled="currentInvoiceIndex === 0" class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-20 disabled:cursor-not-allowed transition shadow">
+                    <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </button>
+
+                <!-- Month Year & Status -->
+                <div class="text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <span class="text-base font-bold text-slate-100" x-text="currentInvoice ? getMonthName(currentInvoice.month) + ' / ' + currentInvoice.year : ''"></span>
+                        <span class="text-[11px] px-2.5 py-0.5 rounded-full font-semibold" :class="currentInvoice?.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'" x-text="currentInvoice ? currentInvoice.status_display : ''"></span>
+                    </div>
+                    <div class="text-2xl font-black text-purple-400 mt-1" x-text="formatCurrency(currentInvoice ? currentInvoice.total_amount : 0)"></div>
+                </div>
+
+                <!-- Right Arrow -->
+                <button type="button" @click="nextInvoiceCycle()" :disabled="currentInvoiceIndex === cardInvoices.length - 1" class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-20 disabled:cursor-not-allowed transition shadow">
+                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Invoice Action Bar -->
+            <div class="flex items-center justify-between text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
+                <div>
+                    <span>Compras no ciclo: </span>
+                    <strong class="text-slate-200" x-text="(currentInvoice?.transactions ? currentInvoice.transactions.length : 0) + ' item(ns)'"></strong>
+                </div>
+
+                <template x-if="currentInvoice?.status === 'OPEN' && currentInvoice?.total_amount > 0">
+                    <button @click="openPayInvoiceModal(currentInvoice)" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg transition shadow flex items-center gap-1.5">
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        <span>Pagar Fatura</span>
+                    </button>
+                </template>
+
+                <template x-if="currentInvoice?.status === 'PAID'">
+                    <span class="text-emerald-400 font-semibold flex items-center gap-1">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>Fatura Paga</span>
+                    </span>
+                </template>
+            </div>
+
+            <!-- Cycle Purchases List -->
+            <div class="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                <template x-for="tx in (currentInvoice?.transactions || [])" :key="tx.id">
+                    <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold text-slate-200 text-sm flex items-center gap-2">
+                                <span x-text="tx.description"></span>
+                                <template x-if="tx.total_installments > 1">
+                                    <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-cyan-400 font-mono" x-text="tx.installment_number + '/' + tx.total_installments"></span>
+                                </template>
+                            </div>
+                            <div class="text-xs text-slate-400 mt-0.5" x-text="formatDate(tx.date) + (tx.category_name ? ' • ' + tx.category_name : '')"></div>
+                        </div>
+                        <div class="font-bold text-slate-100 text-sm" x-text="formatCurrency(tx.amount)"></div>
+                    </div>
+                </template>
+
+                <div x-show="!currentInvoice?.transactions || currentInvoice.transactions.length === 0" class="py-10 text-center text-slate-500 text-sm">
+                    Nenhuma compra registrada neste ciclo de fatura. 💳
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: PAY INVOICE DEBIT SELECT -->
+    <div x-show="showPayModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4">
+        <div @click.away="showPayModal = false" class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-slate-100">Confirmar Pagamento de Fatura</h3>
+                <button @click="showPayModal = false" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form @submit.prevent="confirmPayInvoice()" class="space-y-4">
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <div class="text-xs text-slate-400">Fatura</div>
+                    <div class="font-bold text-slate-200 text-base" x-text="(selectedCard ? selectedCard.name : '') + ' - ' + (selectedInvoice ? getMonthName(selectedInvoice.month) + '/' + selectedInvoice.year : '')"></div>
+                    <div class="text-xl font-black text-purple-400 mt-2" x-text="formatCurrency(selectedInvoice ? selectedInvoice.total_amount : 0)"></div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Debitar da Conta Bancária</label>
+                    <select x-model="payForm.account_id" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                        <option value="">Selecione a conta para pagamento</option>
+                        <template x-for="acc in accounts" :key="acc.id">
+                            <option :value="acc.id" x-text="acc.name + ' (Saldo: ' + formatCurrency(acc.current_balance) + ')'"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
+                    <button type="button" @click="showPayModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 text-sm font-semibold rounded-lg hover:bg-slate-700">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg shadow">Confirmar Pagamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE / EDIT ACCOUNT -->
+    <div x-show="showAccountModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div @click.away="showAccountModal = false" class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-slate-100" x-text="isEditingAccount ? 'Editar Conta Bancária' : 'Nova Conta Bancária'"></h3>
+                <button @click="showAccountModal = false" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Quick Bank Selection Presets -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-2">Seleção Rápida de Banco</label>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="preset in bankPresets" :key="preset.institution">
+                        <button type="button" @click="selectBankPreset(preset)" class="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-700/60 bg-slate-950 hover:border-slate-500 transition">
+                            <span class="w-2.5 h-2.5 rounded-full inline-block" :style="'background-color:' + preset.color"></span>
+                            <span x-text="preset.name" class="text-slate-200"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <form @submit.prevent="saveAccount()" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Nome da Conta</label>
+                    <input type="text" x-model="accountForm.name" placeholder="Ex: Conta Corrente Principal, Poupança Nubank" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Instituição Financeira</label>
+                    <input type="text" x-model="accountForm.institution" placeholder="Ex: Nubank, Banco do Brasil, Itaú, Bradesco" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Tipo de Conta</label>
+                        <select x-model="accountForm.account_type" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                            <option value="CHECKING">Conta Corrente</option>
+                            <option value="SAVINGS">Poupança</option>
+                            <option value="INVESTMENT">Investimento</option>
+                            <option value="CASH">Carteira Física</option>
+                            <option value="OTHER">Outros</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Saldo Inicial (R$)</label>
+                        <input type="number" step="0.01" x-model="accountForm.initial_balance" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Ícone / Logo da Conta</label>
+                        <select x-model="accountForm.icon" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                            <template x-for="iconOpt in availableIcons" :key="iconOpt.id">
+                                <option :value="iconOpt.id" x-text="iconOpt.label"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Cor de Identificação</label>
+                        <div class="flex items-center gap-2">
+                            <input type="color" x-model="accountForm.color" class="h-9 w-full bg-slate-950 border border-slate-800 rounded-lg p-1 cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
+                    <button type="button" @click="showAccountModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 text-sm font-semibold rounded-lg hover:bg-slate-700">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold rounded-lg shadow" x-text="isEditingAccount ? 'Atualizar Conta' : 'Salvar Conta'"></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE / EDIT CATEGORY -->
+    <div x-show="showCategoryModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div @click.away="showCategoryModal = false" class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-slate-100" x-text="isEditingCategory ? 'Editar Categoria' : 'Nova Categoria'"></h3>
+                <button @click="showCategoryModal = false" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form @submit.prevent="saveCategory()" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Nome da Categoria</label>
+                    <input type="text" x-model="categoryForm.name" placeholder="Ex: Alimentação, Mercado, Freelance" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Tipo de Categoria</label>
+                    <select x-model="categoryForm.type" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                        <option value="EXPENSE">Despesa (Saída)</option>
+                        <option value="INCOME">Receita (Entrada)</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Ícone</label>
+                        <select x-model="categoryForm.icon" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                            <option value="tag">🏷️ Tag / Geral</option>
+                            <option value="shopping-cart">🛒 Supermercado</option>
+                            <option value="home">🏠 Moradia</option>
+                            <option value="truck">🚚 Transporte</option>
+                            <option value="smile">🎉 Lazer</option>
+                            <option value="activity">🏥 Saúde</option>
+                            <option value="book">📚 Educação</option>
+                            <option value="wallet">💼 Salário</option>
+                            <option value="laptop">💻 Freelance</option>
+                            <option value="trending-up">📈 Investimento</option>
+                            <option value="utensils">🍽️ Rest. / Alimentação</option>
+                            <option value="gift">🎁 Presentes</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Cor</label>
+                        <input type="color" x-model="categoryForm.color" class="h-9 w-full bg-slate-950 border border-slate-800 rounded-lg p-1 cursor-pointer">
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
+                    <button type="button" @click="showCategoryModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 text-sm font-semibold rounded-lg hover:bg-slate-700">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold rounded-lg shadow" x-text="isEditingCategory ? 'Atualizar Categoria' : 'Salvar Categoria'"></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE CREDIT CARD -->
+    <div x-show="showCardModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div @click.away="showCardModal = false" class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-slate-100">Novo Cartão de Crédito</h3>
+                <button @click="showCardModal = false" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form @submit.prevent="saveCard()" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Nome do Cartão</label>
+                    <input type="text" x-model="cardForm.name" placeholder="Ex: Nubank Roxo, XP Visa Infinite" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Limite Total (R$)</label>
+                    <input type="number" step="0.01" x-model="cardForm.total_limit" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Dia de Fechamento</label>
+                        <input type="number" min="1" max="31" x-model="cardForm.closing_day" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Dia de Vencimento</label>
+                        <input type="number" min="1" max="31" x-model="cardForm.due_day" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Cor do Cartão</label>
+                    <input type="color" x-model="cardForm.color" class="h-10 w-full bg-slate-950 border border-slate-800 rounded-lg p-1 cursor-pointer">
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
+                    <button type="button" @click="showCardModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 text-sm font-semibold rounded-lg hover:bg-slate-700">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-lg shadow">Salvar Cartão</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        function financeApp() {
+            return {
+                currentTab: 'dashboard',
+                tabTitles: {
+                    dashboard: 'Dashboard Visão Geral',
+                    accounts: 'Contas Bancárias',
+                    cards: 'Cartões de Crédito',
+                    transactions: 'Transações',
+                    pending: 'Pendências',
+                    categories: 'Categorias'
+                },
+
+                dashboardCycle: {
+                    month: new Date().getMonth() + 1,
+                    year: new Date().getFullYear()
+                },
+
+                dashboard: {
+                    cycle_month: new Date().getMonth() + 1,
+                    cycle_year: new Date().getFullYear(),
+                    consolidated_balance: 0,
+                    month_realized_income: 0,
+                    month_pending_income: 0,
+                    total_entradas: 0,
+                    month_realized_expenses: 0,
+                    month_pending_expenses: 0,
+                    total_saidas: 0,
+                    month_invoices_total: 0,
+                    saldo: 0,
+                    previsto: 0,
+                    expenses_by_category: [],
+                    upcoming_due_dates: [],
+                    recent_transactions: []
+                },
+
+                accounts: [],
+                cards: [],
+                categories: [],
+                transactions: [],
+
+                bankPresets: [
+                    { name: 'Nubank', institution: 'Nubank', color: '#820ad1', icon: 'wallet' },
+                    { name: 'Itaú', institution: 'Itaú', color: '#ec7000', icon: 'landmark' },
+                    { name: 'Banco do Brasil', institution: 'Banco do Brasil', color: '#0038a8', icon: 'building-2' },
+                    { name: 'Bradesco', institution: 'Bradesco', color: '#cc092f', icon: 'building' },
+                    { name: 'Santander', institution: 'Santander', color: '#ec0000', icon: 'flame' },
+                    { name: 'Caixa', institution: 'Caixa Econômica', color: '#005ca9', icon: 'vault' },
+                    { name: 'Banco Inter', institution: 'Banco Inter', color: '#ff7a00', icon: 'zap' },
+                    { name: 'C6 Bank', institution: 'C6 Bank', color: '#242424', icon: 'credit-card' },
+                    { name: 'XP', institution: 'XP Investimentos', color: '#111827', icon: 'line-chart' },
+                    { name: 'Carteira', institution: 'Carteira Física', color: '#10b981', icon: 'banknote' }
+                ],
+
+                availableIcons: [
+                    { id: 'landmark', label: '🏦 Banco / Geral' },
+                    { id: 'wallet', label: '👛 Carteira' },
+                    { id: 'banknote', label: '💵 Dinheiro / Espécie' },
+                    { id: 'credit-card', label: '💳 Cartão de Crédito' },
+                    { id: 'building', label: '🏢 Prédio / Instituição' },
+                    { id: 'building-2', label: '🏛️ Agência' },
+                    { id: 'vault', label: '🔒 Cofre / Reserva' },
+                    { id: 'line-chart', label: '📈 Investimentos' },
+                    { id: 'zap', label: '⚡ Digital / Rápido' },
+                    { id: 'flame', label: '🔥 Destaque' }
+                ],
+                
+                // Filters
+                txFilters: {
+                    search: '',
+                    type: '',
+                    status: ''
+                },
+
+                // Modals state
+                showTxModal: false,
+                showTransferModal: false,
+                showAccountModal: false,
+                showCardModal: false,
+                showInvoicesModal: false,
+                showPayModal: false,
+                showCategoryModal: false,
+                
+                isEditingAccount: false,
+                isEditingTransaction: false,
+                isEditingCategory: false,
+
+                // Selected items for modal
+                selectedCard: null,
+                cardInvoices: [],
+                currentInvoiceIndex: 0,
+                selectedInvoice: null,
+
+                get currentInvoice() {
+                    return this.cardInvoices[this.currentInvoiceIndex] || null;
+                },
+
+                // Form states
+                txForm: {
+                    id: null,
+                    description: '',
+                    amount: '',
+                    date: new Date().toISOString().split('T')[0],
+                    type: 'EXPENSE',
+                    status: 'COMPLETED',
+                    paymentSource: 'ACCOUNT',
+                    account: '',
+                    credit_card: '',
+                    category: '',
+                    total_installments: 1
+                },
+
+                transferForm: {
+                    source_account_id: '',
+                    destination_account_id: '',
+                    amount: '',
+                    date: new Date().toISOString().split('T')[0],
+                    description: ''
+                },
+
+                accountForm: {
+                    id: null,
+                    name: '',
+                    institution: '',
+                    account_type: 'CHECKING',
+                    initial_balance: 0,
+                    color: '#3b82f6',
+                    icon: 'landmark'
+                },
+
+                categoryForm: {
+                    id: null,
+                    name: '',
+                    type: 'EXPENSE',
+                    icon: 'tag',
+                    color: '#3b82f6'
+                },
+
+                cardForm: {
+                    name: '',
+                    total_limit: 0,
+                    closing_day: 25,
+                    due_day: 5,
+                    color: '#8b5cf6'
+                },
+
+                payForm: {
+                    account_id: ''
+                },
+
+                chartInstance: null,
+                barChartInstance: null,
+
+                async initApp() {
+                    await this.loadAll();
+                    this.$watch('currentTab', (val) => {
+                        if (val === 'dashboard') {
+                            this.$nextTick(() => {
+                                this.renderExpensesChart();
+                                this.renderCycleBarChart();
+                            });
+                        }
+                    });
+                    setTimeout(() => { lucide.createIcons(); }, 100);
+                },
+
+                async loadAll() {
+                    await Promise.all([
+                        this.loadDashboard(),
+                        this.loadAccounts(),
+                        this.loadCards(),
+                        this.loadCategories(),
+                        this.loadTransactions()
+                    ]);
+                },
+
+                async loadDashboard() {
+                    try {
+                        const res = await fetch(`/api/dashboard/?month=${this.dashboardCycle.month}&year=${this.dashboardCycle.year}`);
+                        this.dashboard = await res.json();
+                        this.$nextTick(() => {
+                            this.renderExpensesChart();
+                            this.renderCycleBarChart();
+                        });
+                        setTimeout(() => lucide.createIcons(), 50);
+                    } catch (e) {
+                        console.error('Error loading dashboard', e);
+                    }
+                },
+
+                prevDashboardCycle() {
+                    let m = this.dashboardCycle.month - 1;
+                    let y = this.dashboardCycle.year;
+                    if (m < 1) {
+                        m = 12;
+                        y--;
+                    }
+                    this.dashboardCycle.month = m;
+                    this.dashboardCycle.year = y;
+                    this.loadDashboard();
+                },
+
+                nextDashboardCycle() {
+                    let m = this.dashboardCycle.month + 1;
+                    let y = this.dashboardCycle.year;
+                    if (m > 12) {
+                        m = 1;
+                        y++;
+                    }
+                    this.dashboardCycle.month = m;
+                    this.dashboardCycle.year = y;
+                    this.loadDashboard();
+                },
+
+                async loadAccounts() {
+                    const res = await fetch('/api/accounts/');
+                    this.accounts = await res.json();
+                    setTimeout(() => lucide.createIcons(), 50);
+                },
+
+                async loadCards() {
+                    const res = await fetch('/api/credit-cards/');
+                    this.cards = await res.json();
+                },
+
+                async loadCategories() {
+                    const res = await fetch('/api/categories/');
+                    this.categories = await res.json();
+                    setTimeout(() => lucide.createIcons(), 50);
+                },
+
+                async loadTransactions() {
+                    const res = await fetch('/api/transactions/');
+                    this.transactions = await res.json();
+                    setTimeout(() => lucide.createIcons(), 50);
+                },
+
+                get filteredTransactions() {
+                    return this.transactions.filter(tx => {
+                        if (this.txFilters.search && !tx.description.toLowerCase().includes(this.txFilters.search.toLowerCase())) return false;
+                        if (this.txFilters.type && tx.type !== this.txFilters.type) return false;
+                        if (this.txFilters.status && tx.status !== this.txFilters.status) return false;
+                        return true;
+                    });
+                },
+
+                get pendingIncomes() {
+                    return this.transactions.filter(t => t.type === 'INCOME' && t.status === 'PENDING');
+                },
+
+                get pendingExpenses() {
+                    return this.transactions.filter(t => t.type === 'EXPENSE' && t.status === 'PENDING');
+                },
+
+                get pendingCount() {
+                    return this.transactions.filter(t => t.status === 'PENDING').length;
+                },
+
+                openTransactionModal() {
+                    this.isEditingTransaction = false;
+                    this.txForm = {
+                        id: null,
+                        description: '',
+                        amount: '',
+                        date: new Date().toISOString().split('T')[0],
+                        type: 'EXPENSE',
+                        status: 'COMPLETED',
+                        paymentSource: 'ACCOUNT',
+                        account: this.accounts.length ? this.accounts[0].id : '',
+                        credit_card: this.cards.length ? this.cards[0].id : '',
+                        category: '',
+                        total_installments: 1
+                    };
+                    this.showTxModal = true;
+                },
+
+                editTransactionModal(tx) {
+                    this.isEditingTransaction = true;
+                    this.txForm = {
+                        id: tx.id,
+                        description: tx.description,
+                        amount: tx.amount,
+                        date: tx.date,
+                        type: tx.type,
+                        status: tx.status,
+                        paymentSource: tx.credit_card ? 'CARD' : 'ACCOUNT',
+                        account: tx.account || '',
+                        credit_card: tx.credit_card || '',
+                        category: tx.category || '',
+                        total_installments: tx.total_installments || 1
+                    };
+                    this.showTxModal = true;
+                },
+
+                onTxTypeChange() {
+                    if (this.txForm.type === 'INCOME') {
+                        this.txForm.paymentSource = 'ACCOUNT';
+                    }
+                },
+
+                async saveTransaction() {
+                    const payload = {
+                        description: this.txForm.description,
+                        amount: this.txForm.amount,
+                        date: this.txForm.date,
+                        type: this.txForm.type,
+                        status: this.txForm.status,
+                        category: this.txForm.category || null,
+                        total_installments: this.txForm.total_installments
+                    };
+
+                    if (this.txForm.paymentSource === 'ACCOUNT') {
+                        payload.account = this.txForm.account || null;
+                        payload.credit_card = null;
+                    } else if (this.txForm.paymentSource === 'CARD') {
+                        payload.credit_card = this.txForm.credit_card || null;
+                        payload.account = null;
+                    }
+
+                    const url = this.isEditingTransaction ? `/api/transactions/${this.txForm.id}/` : '/api/transactions/';
+                    const method = this.isEditingTransaction ? 'PUT' : 'POST';
+
+                    const res = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) {
+                        this.showTxModal = false;
+                        await this.loadAll();
+                    }
+                },
+
+                async toggleTxStatus(txId) {
+                    const res = await fetch(`/api/transactions/${txId}/toggle_status/`, { method: 'PATCH' });
+                    if (res.ok) {
+                        await this.loadAll();
+                    }
+                },
+
+                async deleteTransaction(txId) {
+                    if (confirm('Deseja excluir esta transação?')) {
+                        const res = await fetch(`/api/transactions/${txId}/`, { method: 'DELETE' });
+                        if (res.ok) {
+                            await this.loadAll();
+                        }
+                    }
+                },
+
+                openTransferModal() {
+                    this.transferForm = {
+                        source_account_id: this.accounts.length ? this.accounts[0].id : '',
+                        destination_account_id: this.accounts.length > 1 ? this.accounts[1].id : '',
+                        amount: '',
+                        date: new Date().toISOString().split('T')[0],
+                        description: ''
+                    };
+                    this.showTransferModal = true;
+                },
+
+                async executeTransfer() {
+                    if (this.transferForm.source_account_id === this.transferForm.destination_account_id) {
+                        alert('A conta de origem e destino não podem ser iguais.');
+                        return;
+                    }
+                    const res = await fetch('/api/accounts/transfer/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.transferForm)
+                    });
+                    if (res.ok) {
+                        this.showTransferModal = false;
+                        await this.loadAll();
+                    }
+                },
+
+                selectBankPreset(preset) {
+                    this.accountForm.institution = preset.institution;
+                    this.accountForm.color = preset.color;
+                    this.accountForm.icon = preset.icon;
+                    if (!this.accountForm.name) {
+                        this.accountForm.name = 'Conta ' + preset.name;
+                    }
+                },
+
+                openAccountModal() {
+                    this.isEditingAccount = false;
+                    this.accountForm = {
+                        id: null,
+                        name: '',
+                        institution: '',
+                        account_type: 'CHECKING',
+                        initial_balance: 0,
+                        color: '#3b82f6',
+                        icon: 'landmark'
+                    };
+                    this.showAccountModal = true;
+                },
+
+                editAccountModal(acc) {
+                    this.isEditingAccount = true;
+                    this.accountForm = {
+                        id: acc.id,
+                        name: acc.name,
+                        institution: acc.institution,
+                        account_type: acc.account_type,
+                        initial_balance: acc.initial_balance,
+                        color: acc.color,
+                        icon: acc.icon || 'landmark'
+                    };
+                    this.showAccountModal = true;
+                },
+
+                async saveAccount() {
+                    const url = this.isEditingAccount ? `/api/accounts/${this.accountForm.id}/` : '/api/accounts/';
+                    const method = this.isEditingAccount ? 'PUT' : 'POST';
+
+                    const res = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.accountForm)
+                    });
+
+                    if (res.ok) {
+                        this.showAccountModal = false;
+                        await this.loadAll();
+                    }
+                },
+
+                async deleteAccount(accId) {
+                    if (confirm('Excluir esta conta e recalcular os saldos?')) {
+                        await fetch(`/api/accounts/${accId}/`, { method: 'DELETE' });
+                        await this.loadAll();
+                    }
+                },
+
+                openCategoryModal() {
+                    this.isEditingCategory = false;
+                    this.categoryForm = {
+                        id: null,
+                        name: '',
+                        type: 'EXPENSE',
+                        icon: 'tag',
+                        color: '#ef4444'
+                    };
+                    this.showCategoryModal = true;
+                },
+
+                editCategoryModal(cat) {
+                    this.isEditingCategory = true;
+                    this.categoryForm = {
+                        id: cat.id,
+                        name: cat.name,
+                        type: cat.type,
+                        icon: cat.icon || 'tag',
+                        color: cat.color || '#ef4444'
+                    };
+                    this.showCategoryModal = true;
+                },
+
+                async saveCategory() {
+                    const url = this.isEditingCategory ? `/api/categories/${this.categoryForm.id}/` : '/api/categories/';
+                    const method = this.isEditingCategory ? 'PUT' : 'POST';
+
+                    const res = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.categoryForm)
+                    });
+
+                    if (res.ok) {
+                        this.showCategoryModal = false;
+                        await this.loadAll();
+                    }
+                },
+
+                async deleteCategory(catId) {
+                    if (confirm('Deseja excluir esta categoria?')) {
+                        const res = await fetch(`/api/categories/${catId}/`, { method: 'DELETE' });
+                        if (res.ok) {
+                            await this.loadAll();
+                        }
+                    }
+                },
+
+                openCardModal() {
+                    this.cardForm = {
+                        name: '',
+                        total_limit: 0,
+                        closing_day: 25,
+                        due_day: 5,
+                        color: '#8b5cf6'
+                    };
+                    this.showCardModal = true;
+                },
+
+                async saveCard() {
+                    const res = await fetch('/api/credit-cards/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.cardForm)
+                    });
+                    if (res.ok) {
+                        this.showCardModal = false;
+                        await this.loadAll();
+                    }
+                },
+
+                async openInvoicesModal(card) {
+                    this.selectedCard = card;
+                    const res = await fetch(`/api/credit-cards/${card.id}/invoices/`);
+                    this.cardInvoices = await res.json();
+                    
+                    const now = new Date();
+                    const curMonth = now.getMonth() + 1;
+                    const curYear = now.getFullYear();
+
+                    const idx = this.cardInvoices.findIndex(inv => inv.month === curMonth && inv.year === curYear);
+                    this.currentInvoiceIndex = idx !== -1 ? idx : (this.cardInvoices.length - 1);
+                    
+                    this.showInvoicesModal = true;
+                    setTimeout(() => lucide.createIcons(), 50);
+                },
+
+                prevInvoiceCycle() {
+                    if (this.currentInvoiceIndex > 0) {
+                        this.currentInvoiceIndex--;
+                        setTimeout(() => lucide.createIcons(), 50);
+                    }
+                },
+
+                nextInvoiceCycle() {
+                    if (this.currentInvoiceIndex < this.cardInvoices.length - 1) {
+                        this.currentInvoiceIndex++;
+                        setTimeout(() => lucide.createIcons(), 50);
+                    }
+                },
+
+                openPayInvoiceModal(invoice) {
+                    this.selectedInvoice = invoice;
+                    this.payForm = {
+                        account_id: this.accounts.length ? this.accounts[0].id : ''
+                    };
+                    this.showPayModal = true;
+                },
+
+                async confirmPayInvoice() {
+                    const res = await fetch(`/api/credit-cards/${this.selectedCard.id}/pay_invoice/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            month: this.selectedInvoice.month,
+                            year: this.selectedInvoice.year,
+                            account_id: this.payForm.account_id
+                        })
+                    });
+
+                    if (res.ok) {
+                        this.showPayModal = false;
+                        this.showInvoicesModal = false;
+                        await this.loadAll();
+                    } else {
+                        const err = await res.json();
+                        alert(err.error || 'Erro ao pagar fatura');
+                    }
+                },
+
+                renderExpensesChart() {
+                    this.$nextTick(() => {
+                        const ctx = document.getElementById('expensesChart');
+                        if (!ctx) return;
+
+                        const cats = this.dashboard.expenses_by_category || [];
+                        const existingChart = Chart.getChart(ctx);
+
+                        if (cats.length === 0) {
+                            if (existingChart) {
+                                existingChart.destroy();
+                            }
+                            return;
+                        }
+
+                        const labels = cats.map(c => c.category_name);
+                        const dataValues = cats.map(c => Number(c.total));
+                        const colors = cats.map(c => c.category_color);
+
+                        if (existingChart) {
+                            existingChart.data.labels = labels;
+                            existingChart.data.datasets[0].data = dataValues;
+                            existingChart.data.datasets[0].backgroundColor = colors;
+                            existingChart.update();
+                            return;
+                        }
+
+                        this.chartInstance = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: dataValues,
+                                    backgroundColor: colors,
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: { color: '#94a3b8', font: { size: 11 } }
+                                    }
+                                },
+                                cutout: '70%'
+                            }
+                        });
+                    });
+                },
+
+                renderCycleBarChart() {
+                    this.$nextTick(() => {
+                        const ctx = document.getElementById('cycleBarChart');
+                        if (!ctx) return;
+
+                        const dataValues = [
+                            Number(this.dashboard.total_entradas || 0),
+                            Number(this.dashboard.total_saidas || 0),
+                            Number(this.dashboard.saldo || 0),
+                            Number(this.dashboard.previsto || 0)
+                        ];
+
+                        const existingChart = Chart.getChart(ctx);
+
+                        if (existingChart) {
+                            existingChart.data.datasets[0].data = dataValues;
+                            existingChart.update();
+                            return;
+                        }
+
+                        this.barChartInstance = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: ['Entradas', 'Saídas', 'Saldo do Ciclo', 'Previsto do Ciclo'],
+                                datasets: [{
+                                    label: 'Valor (R$)',
+                                    data: dataValues,
+                                    backgroundColor: ['#10b981', '#f43f5e', '#0284c7', '#8b5cf6'],
+                                    borderRadius: 8,
+                                    borderSkipped: false
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: (context) => 'R$ ' + new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(context.raw)
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: { display: false },
+                                        ticks: { color: '#94a3b8', font: { size: 12, weight: 'bold' } }
+                                    },
+                                    y: {
+                                        grid: { color: '#1e293b' },
+                                        ticks: {
+                                            color: '#94a3b8',
+                                            callback: (val) => 'R$ ' + val
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    });
+                },
+
+                formatCurrency(value) {
+                    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+                },
+
+                formatDate(isoDateStr) {
+                    if (!isoDateStr) return '';
+                    const parts = isoDateStr.split('-');
+                    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                },
+
+                getMonthName(monthNum) {
+                    if (!monthNum) return '';
+                    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+                    return months[(monthNum - 1) % 12];
+                },
+
+                getTypeBadgeClass(type) {
+                    if (type === 'INCOME') return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    if (type === 'EXPENSE') return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                    return 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
+                }
+            };
+        }
+    </script>
+</body>
+</html>
